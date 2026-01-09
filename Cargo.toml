@@ -7,3 +7,5 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+chrono = "0.4"
