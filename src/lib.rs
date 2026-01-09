@@ -1,9 +1,42 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use rusqlite::{Connection, Result};
+use chrono::Utc;
 
-/// Core function that takes a string and returns a formatted message
+/// Initialize the database and create the messages table if it doesn't exist
+fn init_db() -> Result<Connection> {
+    let conn = Connection::open("messages.db")?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message TEXT NOT NULL,
+            timestamp TEXT NOT NULL
+        )",
+        [],
+    )?;
+    Ok(conn)
+}
+
+/// Core function that takes a string, writes it to the database, and returns a formatted message
 pub fn format_message(input: &str) -> String {
-    format!("Message received: [{}]", input)
+    // Attempt to write to database
+    match write_to_db(input) {
+        Ok(_) => format!("Message received hay!: [{}]", input),
+        Err(e) => format!("Message received: [{}] (DB Error: {})", input, e),
+    }
+}
+
+/// Write a message to the database with a timestamp
+fn write_to_db(message: &str) -> Result<()> {
+    let conn = init_db()?;
+    let timestamp = Utc::now().to_rfc3339();
+    
+    conn.execute(
+        "INSERT INTO messages (message, timestamp) VALUES (?1, ?2)",
+        [message, &timestamp],
+    )?;
+    
+    Ok(())
 }
 
 /// FFI-compatible function that can be called from C++
