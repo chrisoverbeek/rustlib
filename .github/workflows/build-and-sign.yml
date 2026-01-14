@@ -98,11 +98,9 @@ jobs:
     
     - name: Upload to release
       if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: target/release/rustlib.dll
-        asset_name: rustlib.dll
-        asset_content_type: application/octet-stream
+        files: |
+          target/release/rustlib.dll
