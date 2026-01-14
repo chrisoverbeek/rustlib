@@ -1,0 +1,106 @@
+# GitHub Actions workflow for building and signing the Rust library
+name: Build and Sign
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-sign:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache target directory
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run tests
+      run: cargo test --verbose
+    
+    - name: Build release
+      run: cargo build --release --verbose
+    
+    # Only sign on main branch or releases when certificate is available
+    - name: Import code signing certificate
+      if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+      shell: powershell
+      run: |
+        if ("${{ secrets.CERTIFICATE_BASE64 }}" -ne "") {
+          $cert = [Convert]::FromBase64String("${{ secrets.CERTIFICATE_BASE64 }}")
+          [IO.File]::WriteAllBytes("$env:TEMP\cert.pfx", $cert)
+          Write-Host "Certificate imported successfully"
+        } else {
+          Write-Host "No certificate available - skipping signing"
+          echo "SKIP_SIGNING=true" >> $env:GITHUB_ENV
+        }
+    
+    - name: Sign DLL
+      if: (github.event_name == 'release' || github.ref == 'refs/heads/main') && env.SKIP_SIGNING != 'true'
+      shell: powershell
+      run: |
+        .\sign.ps1 -CertificatePath "$env:TEMP\cert.pfx" `
+          -CertificatePassword "${{ secrets.CERTIFICATE_PASSWORD }}"
+    
+    - name: Verify signature
+      if: (github.event_name == 'release' || github.ref == 'refs/heads/main') && env.SKIP_SIGNING != 'true'
+      shell: powershell
+      run: |
+        .\verify-signature.ps1 -BuildType Release
+    
+    - name: Clean up certificate
+      if: always()
+      shell: powershell
+      run: |
+        if (Test-Path "$env:TEMP\cert.pfx") {
+          Remove-Item "$env:TEMP\cert.pfx" -Force
+        }
+    
+    - name: Upload signed DLL
+      uses: actions/upload-artifact@v4
+      with:
+        name: rustlib-signed-${{ github.sha }}
+        path: |
+          target/release/rustlib.dll
+          target/release/rustlib.lib
+          rustlib.h
+        retention-days: 90
+    
+    - name: Upload to release
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        files: |
+          target/release/rustlib.dll
