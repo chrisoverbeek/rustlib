@@ -25,11 +25,11 @@ $signature = Get-AuthenticodeSignature -FilePath $dllPath
 # Display status
 Write-Host "Status: " -NoNewline
 switch ($signature.Status) {
-    "Valid" { Write-Host "✓ Valid" -ForegroundColor Green }
-    "NotSigned" { Write-Host "✗ Not Signed" -ForegroundColor Red }
-    "HashMismatch" { Write-Host "✗ Hash Mismatch (file may be corrupted or tampered)" -ForegroundColor Red }
-    "NotTrusted" { Write-Host "⚠ Not Trusted (certificate not in trusted store)" -ForegroundColor Yellow }
-    default { Write-Host "⚠ $($signature.Status)" -ForegroundColor Yellow }
+    "Valid" { Write-Host "[OK] Valid" -ForegroundColor Green }
+    "NotSigned" { Write-Host "[ERROR] Not Signed" -ForegroundColor Red }
+    "HashMismatch" { Write-Host "[ERROR] Hash Mismatch (file may be corrupted or tampered)" -ForegroundColor Red }
+    "NotTrusted" { Write-Host "[WARNING] Not Trusted (certificate not in trusted store)" -ForegroundColor Yellow }
+    default { Write-Host "[WARNING] $($signature.Status)" -ForegroundColor Yellow }
 }
 
 if ($signature.SignerCertificate) {

@@ -102,7 +102,7 @@ Write-Host "=== Verifying Signature ===" -ForegroundColor Cyan
 $signature = Get-AuthenticodeSignature -FilePath $dllPath
 
 if ($signature.Status -eq "Valid") {
-    Write-Host "✓ DLL successfully signed!" -ForegroundColor Green
+    Write-Host "[SUCCESS] DLL successfully signed!" -ForegroundColor Green
     Write-Host "  Status: $($signature.Status)"
     Write-Host "  Signer: $($signature.SignerCertificate.Subject)"
     Write-Host "  Timestamp: $($signature.TimeStamperCertificate.Subject)"
