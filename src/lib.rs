@@ -21,7 +21,7 @@ fn init_db() -> Result<Connection> {
 pub fn format_message(input: &str) -> String {
     // Attempt to write to database
     match write_to_db(input) {
-        Ok(_) => format!("Message received hay!: [{}]", input),
+        Ok(_) => format!("Message received: [{}]", input),
         Err(e) => format!("Message received: [{}] (DB Error: {})", input, e),
     }
 }
